@@ -1,0 +1,14 @@
+# Fingerprint Framework Dependencies
+
+# UI
+PyQt6>=6.6.0
+
+# USB Communication
+pyusb>=1.2.1
+
+# Image Processing
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# AI (Optional - for ONNX matching engine)
+onnxruntime>=1.16.0

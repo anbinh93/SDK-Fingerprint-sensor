@@ -1,0 +1,17 @@
+[project]
+name = "fingersensor"
+version = "0.1.0"
+description = "USB Fingerprint Reader Application"
+requires-python = ">=3.10"
+dependencies = [
+    "pyqt6>=6.6.0",
+    "pyusb>=1.2.1",
+    "numpy>=1.24.0",
+    "pillow>=10.0.0",
+]
+
+[project.scripts]
+fingerprint-app = "app.main:main"
+
+[dependency-groups]
+dev = []
