@@ -1,0 +1,67 @@
+.fingerprint-canvas-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background-color: #0d1117;
+  border-radius: 12px;
+  border: 3px solid transparent;
+  transition: border-color 0.3s ease;
+}
+
+.fingerprint-canvas-container.quality-good {
+  border-color: #4ade80;
+}
+
+.fingerprint-canvas-container.quality-medium {
+  border-color: #fbbf24;
+}
+
+.fingerprint-canvas-container.quality-low {
+  border-color: #ef4444;
+}
+
+.fingerprint-canvas {
+  border-radius: 8px;
+  background-color: #1a1a2e;
+}
+
+.fingerprint-info {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 12px;
+  padding: 0 4px;
+}
+
+.finger-status {
+  font-weight: 500;
+}
+
+.finger-status.detected {
+  color: #4ade80;
+}
+
+.finger-status.empty {
+  color: #6b7280;
+}
+
+.quality-score {
+  color: #9ca3af;
+  font-family: monospace;
+}
+
+.quality-bar-container {
+  width: 100%;
+  height: 4px;
+  background-color: #374151;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.quality-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #ef4444 0%, #fbbf24 50%, #4ade80 100%);
+  transition: width 0.2s ease;
+}

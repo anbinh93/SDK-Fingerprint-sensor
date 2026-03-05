@@ -1,3 +1,9 @@
 {
-    "cmake.sourceDirectory": "/Users/nguyenbinhan/Workspace/fingersensor/fingerprint-sdk"
+    "cmake.sourceDirectory": "/Users/nguyenbinhan/Workspace/fingersensor/fingerprint-sdk",
+    "chat.tools.terminal.autoApprove": {
+        "/^python3 -m pip install pyusb$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
 }

@@ -1,0 +1,74 @@
+.terminal-container {
+  display: flex;
+  flex-direction: column;
+  background-color: #0d1117;
+  border-radius: 12px;
+  overflow: hidden;
+  flex: 1;
+  min-height: 400px;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background-color: #161b22;
+  border-bottom: 1px solid #30363d;
+}
+
+.terminal-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #c9d1d9;
+}
+
+.terminal-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.terminal-status {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+
+.terminal-status.disconnected {
+  background-color: #21262d;
+  color: #8b949e;
+}
+
+.terminal-status.connecting {
+  background-color: rgba(210, 153, 34, 0.2);
+  color: #d29922;
+}
+
+.terminal-status.connected {
+  background-color: rgba(126, 231, 135, 0.2);
+  color: #7ee787;
+}
+
+.terminal-status.error {
+  background-color: rgba(255, 123, 114, 0.2);
+  color: #ff7b72;
+}
+
+.terminal-content {
+  flex: 1;
+  padding: 8px;
+}
+
+.terminal-content .xterm {
+  height: 100%;
+}
+
+.terminal-content .xterm-viewport {
+  overflow-y: auto !important;
+}
+
+.terminal-content .xterm-screen {
+  height: 100% !important;
+}

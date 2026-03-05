@@ -73,12 +73,13 @@ class FingerprintReader:
     IMAGE_WIDTH = 192
     IMAGE_HEIGHT = 192
     
-    def __init__(self, libusb_path: str = None):
+    def __init__(self, libusb_path: str = None, verbose: bool = False):
         self.dev = None
         self.tag = 1
         self.ep_out = 0x01
         self.ep_in = 0x81
         self.timeout = 2000
+        self.verbose = verbose
         
         if libusb_path:
             self.backend = usb.backend.libusb1.get_backend(
@@ -87,8 +88,15 @@ class FingerprintReader:
         else:
             self.backend = None
     
+    def _log(self, msg: str):
+        """Print debug message if verbose mode is enabled"""
+        if self.verbose:
+            print(f"[DEBUG] {msg}")
+    
     def open(self) -> bool:
         """Open and initialize the fingerprint reader"""
+        self._log(f"Searching for device VID={hex(self.VID)} PID={hex(self.PID)}")
+        
         self.dev = usb.core.find(
             idVendor=self.VID, 
             idProduct=self.PID, 
@@ -96,35 +104,56 @@ class FingerprintReader:
         )
         
         if not self.dev:
+            self._log("Device not found by PyUSB")
             return False
+        
+        self._log(f"Device found: {self.dev.manufacturer} {self.dev.product}")
         
         try:
             if self.dev.is_kernel_driver_active(0):
+                self._log("Kernel driver active, detaching...")
                 self.dev.detach_kernel_driver(0)
-        except:
-            pass
-        
-        self.dev.set_configuration()
+                self._log("Kernel driver detached")
+        except Exception as e:
+            self._log(f"Kernel driver detach: {e}")
         
         try:
+            self._log("Setting configuration...")
+            self.dev.set_configuration()
+            self._log("Configuration set")
+        except Exception as e:
+            self._log(f"Set configuration failed: {e}")
+            return False
+        
+        try:
+            self._log("Sending reset command...")
             self.dev.ctrl_transfer(0x21, 0xFF, 0, 0, None, timeout=1000)
-        except:
-            pass
+            self._log("Reset command sent")
+        except Exception as e:
+            self._log(f"Reset command: {e}")
         
         time.sleep(0.2)
         
         try:
+            self._log("Clearing endpoints...")
             self.dev.ctrl_transfer(0x02, 0x01, 0, self.ep_out, None, timeout=500)
             self.dev.ctrl_transfer(0x02, 0x01, 0, self.ep_in, None, timeout=500)
-        except:
-            pass
+            self._log("Endpoints cleared")
+        except Exception as e:
+            self._log(f"Clear endpoints: {e}")
         
+        # Flush any pending data
+        self._log("Flushing pending data...")
+        flush_count = 0
         while True:
             try:
                 self.dev.read(self.ep_in, 64, timeout=100)
+                flush_count += 1
             except:
                 break
+        self._log(f"Flushed {flush_count} packets")
         
+        self._log("Device opened successfully")
         return True
     
     def close(self):
@@ -152,6 +181,7 @@ class FingerprintReader:
         self.tag += 1
         
         try:
+            self._log(f"SCSI WRITE: {data.hex()}")
             self.dev.write(self.ep_out, bytes(cbw), timeout=self.timeout)
             self.dev.write(self.ep_out, data, timeout=self.timeout)
             csw = self.dev.read(self.ep_in, 13, timeout=self.timeout)
@@ -214,11 +244,18 @@ class FingerprintReader:
     def _send_command(self, cmd: int, p1: int = 0, p2: int = 0,
                       p3: int = 0, p4: int = 0, read_len: int = 8) -> Optional[bytes]:
         """Send command and receive response"""
+        self._log(f"CMD: {hex(cmd)} p1={p1} p2={p2} p3={p3} p4={p4}")
         packet = self._build_packet(cmd, p1, p2, p3, p4)
         if not self._scsi_write(packet):
+            self._log("SCSI write failed")
             return None
         time.sleep(0.05)
-        return self._scsi_read(read_len)
+        response = self._scsi_read(read_len)
+        if response:
+            self._log(f"RESPONSE: {response.hex()}")
+        else:
+            self._log("No response")
+        return response
     
     def _parse_response(self, data: bytes) -> Tuple[int, int, int, int, int]:
         """Parse response: returns (cmd, p1, p2, p3, p4)"""
@@ -580,8 +617,11 @@ Examples:
   sudo python3 fingerprint.py add
   sudo python3 fingerprint.py match
   sudo python3 fingerprint.py delete all
+  sudo python3 fingerprint.py --verbose info  # Debug mode
 '''
     )
+    
+    parser.add_argument('-v', '--verbose', action='store_true', help='Enable debug output')
     
     subparsers = parser.add_subparsers(dest='command', help='Commands')
     
@@ -613,11 +653,13 @@ Examples:
         return 1
     
     # Open device
-    fp = FingerprintReader(get_libusb_path())
+    fp = FingerprintReader(get_libusb_path(), verbose=args.verbose)
     
     if not fp.open():
         print("ERROR: Device not found")
         print("Make sure device is connected and you have permissions (sudo)")
+        if not args.verbose:
+            print("Run with --verbose for more details")
         return 1
     
     try:

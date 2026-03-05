@@ -1,0 +1,155 @@
+.connection-panel {
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 300px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.status-indicator {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-indicator.disconnected {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.status-indicator.connecting {
+  background-color: rgba(251, 191, 36, 0.2);
+  color: var(--accent-warning);
+}
+
+.status-indicator.connected {
+  background-color: rgba(74, 222, 128, 0.2);
+  color: var(--accent-success);
+}
+
+.status-indicator.error {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: var(--accent-error);
+}
+
+.usb-status,
+.ssh-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-header h3,
+.ssh-form h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+button.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background-color: var(--bg-primary);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--text-secondary);
+}
+
+.status-item.connected .status-dot {
+  background-color: var(--accent-success);
+}
+
+.status-detail {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 100px;
+  gap: 12px;
+}
+
+.test-result {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.test-result.success {
+  background-color: rgba(74, 222, 128, 0.1);
+  color: var(--accent-success);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.test-result.error {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--accent-error);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.button-group button {
+  flex: 1;
+}
