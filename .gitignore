@@ -8,3 +8,21 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Large model files
+*.onnx
+*.onnx.data
+*.pt
+*.pth
+*.engine
+*.trt
+
+# OS files
+.DS_Store
+
+# Database runtime
+*.db-shm
+*.db-wal
+
+# OMC state
+.omc/
