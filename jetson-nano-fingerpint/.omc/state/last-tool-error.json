@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"source /Users/nguyenbinhan/Workspace/fingersensor/.venv/bin/activate && python -c \\\"\\n# Check PyQt6 availability and UI imports\\ntry:\\n    from PyQt6.QtWidgets import QApplication\\n    pri...",
+  "error": "Exit code 1\nTraceback (most recent call last):\n  File \"<string>\", line 15, in <module>\n    from mdgt_edge.ui.panels import (\n        DeviceControlPanel, QualityPanel, SpoofPanel, EnhancedStatusBar,\n    )\n  File \"/Users/nguyenbinhan/Workspace/fingersensor/jetson-nano-fingerpint/mdgt_edge/ui/panels/__init__.py\", line 1, in <module>\n    from .device_control import DeviceControlPanel\n  File \"/Users/nguyenbinhan/Workspace/fingersensor/jetson-nano-fingerpint/mdgt_edge/ui/panels/device_control.py\", lin...",
+  "timestamp": "2026-04-07T03:22:07.915Z",
+  "retry_count": 1
+}

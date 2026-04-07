@@ -7,7 +7,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -304,7 +304,101 @@ class LEDRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Device schemas
+# IBScanUltimate device schemas
+# ---------------------------------------------------------------------------
+
+
+class IBScanDeviceInfo(BaseModel):
+    """IBScan device information."""
+
+    index: int
+    serial_number: str
+    product_name: str
+    interface_type: str
+    firmware_version: str
+    revision: str
+    is_locked: bool
+    is_open: bool
+
+
+class SegmentInfo(BaseModel):
+    """Individual finger segment info."""
+
+    index: int
+    image_base64: str
+    quality: str  # good, fair, poor
+    is_spoof: Optional[bool] = None
+
+
+class MultiCaptureRequest(BaseModel):
+    """Multi-finger capture request."""
+
+    image_type: str = "flat_single"  # flat_single, flat_two, flat_three, flat_four, roll_single, roll_two
+    resolution: int = 500  # 500 or 1000
+    auto_contrast: bool = True
+    auto_capture: bool = True
+    ignore_finger_count: bool = False
+
+
+class MultiCaptureResponse(BaseModel):
+    """Multi-finger capture result."""
+
+    success: bool
+    image_base64: Optional[str] = None
+    width: int = 0
+    height: int = 0
+    resolution: float = 500.0
+    quality_score: float = 0.0
+    nfiq2_score: int = 0
+    is_spoof: Optional[bool] = None
+    finger_count: int = 0
+    segments: list[SegmentInfo] = []
+
+
+class SpoofCheckRequest(BaseModel):
+    """PAD check request."""
+
+    image_base64: Optional[str] = None  # If None, use last captured
+
+
+class SpoofCheckResponse(BaseModel):
+    """PAD check result."""
+
+    is_spoof: bool
+    per_finger: list[dict] = []  # [{"finger": 0, "is_spoof": false}, ...]
+
+
+class SpoofConfigRequest(BaseModel):
+    """PAD configuration update."""
+
+    enabled: bool
+    level: int = Field(default=3, ge=1, le=5)
+
+
+class SpoofConfig(BaseModel):
+    """Current PAD configuration."""
+
+    enabled: bool
+    level: int
+    supported: bool
+
+
+class NFIQ2Response(BaseModel):
+    """NFIQ2 quality score result."""
+
+    score: int  # 0-100
+    level: str  # excellent, good, adequate, fair, poor
+
+
+class ExportRequest(BaseModel):
+    """Image export request."""
+
+    format: str = "png"  # png, wsq, jp2, bmp
+    image_base64: Optional[str] = None  # If None, use last captured
+
+
+# ---------------------------------------------------------------------------
+# Device schemas (system device, not fingerprint device)
 # ---------------------------------------------------------------------------
 
 

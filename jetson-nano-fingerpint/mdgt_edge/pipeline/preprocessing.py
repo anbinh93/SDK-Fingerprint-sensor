@@ -211,6 +211,46 @@ class FingerprintPreprocessor:
 
         return image
 
+    def process_for_vit(
+        self,
+        raw_image: bytes,
+        sensor_width: int = 192,
+        sensor_height: int = 192,
+        model_size: int = 224,
+    ) -> np.ndarray:
+        """Preprocess raw sensor bytes into a ViT-compatible float32 tensor.
+
+        Pipeline:
+            1. Standard preprocessing (decode, normalize, segment, enhance)
+            2. Resize to model_size x model_size
+            3. Convert grayscale to 3-channel RGB
+            4. Scale to [0, 1] float32
+            5. Reshape to (1, 3, H, W) NCHW format
+
+        Args:
+            raw_image: Raw image bytes from sensor.
+            sensor_width: Sensor native width.
+            sensor_height: Sensor native height.
+            model_size: ViT input resolution (default 224).
+
+        Returns:
+            Float32 numpy array of shape (1, 3, model_size, model_size).
+        """
+        # Run standard grayscale preprocessing
+        gray = self.process(raw_image, width=sensor_width, height=sensor_height)
+
+        # Resize to model input size
+        resized = cv2.resize(gray, (model_size, model_size), interpolation=cv2.INTER_LINEAR)
+
+        # Grayscale -> 3-channel RGB (stack same channel 3 times)
+        rgb = np.stack([resized, resized, resized], axis=0).astype(np.float32)
+
+        # Normalize to [0, 1]
+        rgb = rgb / 255.0
+
+        # Add batch dimension: (3, H, W) -> (1, 3, H, W)
+        return np.expand_dims(rgb, axis=0)
+
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
