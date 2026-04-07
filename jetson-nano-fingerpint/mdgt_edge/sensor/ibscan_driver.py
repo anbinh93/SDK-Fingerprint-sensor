@@ -331,6 +331,106 @@ class IBScanUltimateDriver:
         ]
         lib.IBSU_GetNFIQScore.restype = ctypes.c_int
 
+        # --- Capture state ---
+        lib.IBSU_IsCaptureActive.argtypes = [
+            ctypes.c_int, ctypes.POINTER(ctypes.c_int),
+        ]
+        lib.IBSU_IsCaptureActive.restype = ctypes.c_int
+
+        lib.IBSU_TakeResultImageManually.argtypes = [ctypes.c_int]
+        lib.IBSU_TakeResultImageManually.restype = ctypes.c_int
+
+        # --- Duplicate / finger geometry ---
+        lib.IBSU_RemoveFingerImage.argtypes = [
+            ctypes.c_int, ctypes.c_ulong,
+        ]
+        lib.IBSU_RemoveFingerImage.restype = ctypes.c_int
+
+        lib.IBSU_AddFingerImage.argtypes = [
+            ctypes.c_int, IBSU_ImageData, ctypes.c_ulong,
+            ctypes.c_int,  # imageType
+        ]
+        lib.IBSU_AddFingerImage.restype = ctypes.c_int
+
+        lib.IBSU_IsFingerDuplicated.argtypes = [
+            ctypes.c_int, IBSU_ImageData, ctypes.c_ulong,
+            ctypes.c_int,  # imageType
+            ctypes.POINTER(ctypes.c_int),  # pMatchedPosition
+        ]
+        lib.IBSU_IsFingerDuplicated.restype = ctypes.c_int
+
+        lib.IBSU_IsValidFingerGeometry.argtypes = [
+            ctypes.c_int, IBSU_ImageData, ctypes.c_ulong,
+            ctypes.c_int,  # imageType
+            ctypes.POINTER(ctypes.c_int),  # pValid
+        ]
+        lib.IBSU_IsValidFingerGeometry.restype = ctypes.c_int
+
+        # --- Rolling info ---
+        lib.IBSU_BGetRollingInfo.argtypes = [
+            ctypes.c_int, ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int),
+        ]
+        lib.IBSU_BGetRollingInfo.restype = ctypes.c_int
+
+        # --- In-memory WSQ ---
+        lib.IBSU_WSQEncodeMem.argtypes = [
+            ctypes.POINTER(ctypes.c_ubyte),  # image
+            ctypes.c_uint, ctypes.c_uint,    # width, height
+            ctypes.c_int,                     # pitch
+            ctypes.c_int,                     # bpp
+            ctypes.c_int,                     # ppi
+            ctypes.c_double,                  # bitRate
+            ctypes.POINTER(ctypes.c_void_p),  # pOutWSQ
+            ctypes.POINTER(ctypes.c_uint),    # pOutLength
+        ]
+        lib.IBSU_WSQEncodeMem.restype = ctypes.c_int
+
+        lib.IBSU_WSQDecodeMem.argtypes = [
+            ctypes.c_void_p, ctypes.c_uint,   # wsqData, wsqLength
+            ctypes.POINTER(ctypes.c_void_p),   # pOutImage
+            ctypes.POINTER(ctypes.c_uint),     # pOutWidth
+            ctypes.POINTER(ctypes.c_uint),     # pOutHeight
+            ctypes.POINTER(ctypes.c_int),      # pOutPitch
+            ctypes.POINTER(ctypes.c_int),      # pOutBpp
+            ctypes.POINTER(ctypes.c_int),      # pOutPpi
+        ]
+        lib.IBSU_WSQDecodeMem.restype = ctypes.c_int
+
+        lib.IBSU_FreeMemory.argtypes = [ctypes.c_void_p]
+        lib.IBSU_FreeMemory.restype = ctypes.c_int
+
+        # --- ISO/ANSI template ---
+        lib.IBSU_ConvertImageToISOANSI.argtypes = [
+            ctypes.c_int,           # handle
+            IBSU_ImageData,         # image
+            ctypes.c_uint,          # imageCount (1 for single)
+            ctypes.c_int,           # fingerPosition (IBSM_FingerPosition)
+            ctypes.c_int,           # standardFormat
+            ctypes.POINTER(ctypes.c_void_p),  # pOutTemplate
+            ctypes.POINTER(ctypes.c_uint),    # pOutTemplateLength
+        ]
+        lib.IBSU_ConvertImageToISOANSI.restype = ctypes.c_int
+
+        # --- Contrast ---
+        lib.IBSU_GetContrast.argtypes = [
+            ctypes.c_int, ctypes.POINTER(ctypes.c_int),
+        ]
+        lib.IBSU_GetContrast.restype = ctypes.c_int
+
+        lib.IBSU_SetContrast.argtypes = [ctypes.c_int, ctypes.c_int]
+        lib.IBSU_SetContrast.restype = ctypes.c_int
+
+        # --- Release callbacks ---
+        lib.IBSU_ReleaseCallbacks.argtypes = [
+            ctypes.c_int, ctypes.c_int,
+        ]
+        lib.IBSU_ReleaseCallbacks.restype = ctypes.c_int
+
+        # --- Trace log ---
+        lib.IBSU_EnableTraceLog.argtypes = [ctypes.c_int]
+        lib.IBSU_EnableTraceLog.restype = ctypes.c_int
+
         # --- SDK version ---
         lib.IBSU_GetSDKVersion.argtypes = [
             ctypes.POINTER(ctypes.c_char * IBSU_MAX_STR_LEN),
@@ -804,6 +904,262 @@ class IBScanUltimateDriver:
         )
 
     # ------------------------------------------------------------------
+    # Capture state
+    # ------------------------------------------------------------------
+
+    def is_capture_active(self) -> bool:
+        with self._lock:
+            self._require_open()
+            active = ctypes.c_int(0)
+            rc = self._lib.IBSU_IsCaptureActive(
+                self._handle, ctypes.byref(active),
+            )
+            return rc == IBSU_STATUS_OK and active.value != 0
+
+    def take_result_manually(self) -> None:
+        with self._lock:
+            self._require_open()
+            _check(
+                self._lib.IBSU_TakeResultImageManually(self._handle),
+                "TakeResultImageManually",
+            )
+
+    # ------------------------------------------------------------------
+    # Duplicate finger detection
+    # ------------------------------------------------------------------
+
+    def add_finger_image(
+        self, image: IBSU_ImageData, finger_position: int,
+        image_type: int = IBSU_ImageType.FLAT_SINGLE_FINGER,
+    ) -> None:
+        """Add a finger image to the internal duplicate-check gallery."""
+        with self._lock:
+            self._require_open()
+            _check(
+                self._lib.IBSU_AddFingerImage(
+                    self._handle, image, finger_position, image_type,
+                ),
+                "AddFingerImage",
+            )
+
+    def remove_finger_image(self, finger_position: int) -> None:
+        """Remove a finger image from the duplicate-check gallery."""
+        with self._lock:
+            self._require_open()
+            _check(
+                self._lib.IBSU_RemoveFingerImage(
+                    self._handle, ctypes.c_ulong(finger_position),
+                ),
+                "RemoveFingerImage",
+            )
+
+    def is_finger_duplicated(
+        self, image: IBSU_ImageData, finger_position: int,
+        image_type: int = IBSU_ImageType.FLAT_SINGLE_FINGER,
+    ) -> Tuple[bool, int]:
+        """Check if finger image matches any previously added image.
+
+        Returns:
+            (is_duplicate, matched_position): True and the matched
+            finger position if a duplicate is found.
+        """
+        with self._lock:
+            self._require_open()
+            matched = ctypes.c_int(0)
+            rc = self._lib.IBSU_IsFingerDuplicated(
+                self._handle, image, finger_position, image_type,
+                ctypes.byref(matched),
+            )
+            if rc == IBSU_STATUS_OK:
+                return False, 0
+            if rc == IBSU_WRN_SPOOF_DETECTED:
+                return False, 0
+            # rc > 0 with matched position means duplicate found
+            return matched.value != 0, matched.value
+
+    def is_finger_duplicated_from_bytes(
+        self, image_bytes: bytes, width: int, height: int,
+        finger_position: int,
+    ) -> Tuple[bool, int]:
+        """Convenience: check duplicate from raw bytes."""
+        buf = (ctypes.c_ubyte * len(image_bytes)).from_buffer_copy(image_bytes)
+        img = IBSU_ImageData()
+        img.Buffer = ctypes.cast(buf, ctypes.c_void_p)
+        img.Width = width
+        img.Height = height
+        img.BitsPerPixel = 8
+        img.Format = 0  # GRAY
+        img.Pitch = width
+        img.IsFinal = 1
+        return self.is_finger_duplicated(img, finger_position)
+
+    def add_finger_image_from_bytes(
+        self, image_bytes: bytes, width: int, height: int,
+        finger_position: int,
+    ) -> None:
+        """Convenience: add finger from raw bytes to duplicate gallery."""
+        buf = (ctypes.c_ubyte * len(image_bytes)).from_buffer_copy(image_bytes)
+        img = IBSU_ImageData()
+        img.Buffer = ctypes.cast(buf, ctypes.c_void_p)
+        img.Width = width
+        img.Height = height
+        img.BitsPerPixel = 8
+        img.Format = 0
+        img.Pitch = width
+        img.IsFinal = 1
+        self.add_finger_image(img, finger_position)
+
+    def is_valid_finger_geometry(
+        self, image: IBSU_ImageData, finger_position: int,
+        image_type: int = IBSU_ImageType.FLAT_SINGLE_FINGER,
+    ) -> bool:
+        """Check if finger placement geometry is valid."""
+        with self._lock:
+            self._require_open()
+            valid = ctypes.c_int(0)
+            rc = self._lib.IBSU_IsValidFingerGeometry(
+                self._handle, image, finger_position, image_type,
+                ctypes.byref(valid),
+            )
+            return rc == IBSU_STATUS_OK and valid.value != 0
+
+    # ------------------------------------------------------------------
+    # Rolling info
+    # ------------------------------------------------------------------
+
+    def get_rolling_info(self) -> Tuple[int, int]:
+        """Get rolling capture progress.
+
+        Returns:
+            (rolling_state, rolling_line_position)
+        """
+        with self._lock:
+            self._require_open()
+            state = ctypes.c_int(0)
+            line = ctypes.c_int(0)
+            _check(
+                self._lib.IBSU_BGetRollingInfo(
+                    self._handle, ctypes.byref(state), ctypes.byref(line),
+                ),
+                "BGetRollingInfo",
+            )
+            return state.value, line.value
+
+    # ------------------------------------------------------------------
+    # In-memory WSQ encode/decode
+    # ------------------------------------------------------------------
+
+    def wsq_encode_mem(
+        self, image_bytes: bytes, width: int, height: int,
+        ppi: int = 500, bit_rate: float = 0.75,
+    ) -> bytes:
+        """Encode image to WSQ format in memory (no temp file)."""
+        with self._lock:
+            if self._lib is None:
+                raise IBScanError("Library not loaded", -1)
+            buf = (ctypes.c_ubyte * len(image_bytes)).from_buffer_copy(image_bytes)
+            out_ptr = ctypes.c_void_p()
+            out_len = ctypes.c_uint(0)
+            _check(
+                self._lib.IBSU_WSQEncodeMem(
+                    buf, width, height, width, 8, ppi,
+                    ctypes.c_double(bit_rate),
+                    ctypes.byref(out_ptr), ctypes.byref(out_len),
+                ),
+                "WSQEncodeMem",
+            )
+            result = ctypes.string_at(out_ptr, out_len.value)
+            self._lib.IBSU_FreeMemory(out_ptr)
+            return result
+
+    def wsq_decode_mem(self, wsq_data: bytes) -> Tuple[bytes, int, int]:
+        """Decode WSQ data in memory.
+
+        Returns:
+            (image_bytes, width, height)
+        """
+        with self._lock:
+            if self._lib is None:
+                raise IBScanError("Library not loaded", -1)
+            wsq_buf = (ctypes.c_ubyte * len(wsq_data)).from_buffer_copy(wsq_data)
+            out_img = ctypes.c_void_p()
+            out_w = ctypes.c_uint(0)
+            out_h = ctypes.c_uint(0)
+            out_pitch = ctypes.c_int(0)
+            out_bpp = ctypes.c_int(0)
+            out_ppi = ctypes.c_int(0)
+            _check(
+                self._lib.IBSU_WSQDecodeMem(
+                    wsq_buf, len(wsq_data),
+                    ctypes.byref(out_img), ctypes.byref(out_w),
+                    ctypes.byref(out_h), ctypes.byref(out_pitch),
+                    ctypes.byref(out_bpp), ctypes.byref(out_ppi),
+                ),
+                "WSQDecodeMem",
+            )
+            nbytes = out_w.value * out_h.value * (out_bpp.value // 8)
+            result = ctypes.string_at(out_img, nbytes)
+            self._lib.IBSU_FreeMemory(out_img)
+            return result, out_w.value, out_h.value
+
+    # ------------------------------------------------------------------
+    # ISO/ANSI template conversion
+    # ------------------------------------------------------------------
+
+    def convert_image_to_iso(
+        self, image: IBSU_ImageData,
+        finger_position: int = 0,
+        standard_format: int = 0,  # 0 = ISO_19794_2_2005
+    ) -> bytes:
+        """Convert captured image to ISO/ANSI standard template."""
+        with self._lock:
+            self._require_open()
+            out_ptr = ctypes.c_void_p()
+            out_len = ctypes.c_uint(0)
+            _check(
+                self._lib.IBSU_ConvertImageToISOANSI(
+                    self._handle, image, 1,
+                    finger_position, standard_format,
+                    ctypes.byref(out_ptr), ctypes.byref(out_len),
+                ),
+                "ConvertImageToISOANSI",
+            )
+            result = ctypes.string_at(out_ptr, out_len.value)
+            self._lib.IBSU_FreeMemory(out_ptr)
+            return result
+
+    # ------------------------------------------------------------------
+    # Contrast
+    # ------------------------------------------------------------------
+
+    def get_contrast(self) -> int:
+        with self._lock:
+            self._require_open()
+            val = ctypes.c_int(0)
+            _check(
+                self._lib.IBSU_GetContrast(self._handle, ctypes.byref(val)),
+                "GetContrast",
+            )
+            return val.value
+
+    def set_contrast(self, value: int) -> None:
+        with self._lock:
+            self._require_open()
+            _check(
+                self._lib.IBSU_SetContrast(self._handle, value),
+                "SetContrast",
+            )
+
+    # ------------------------------------------------------------------
+    # Trace log
+    # ------------------------------------------------------------------
+
+    def enable_trace_log(self, enable: bool = True) -> None:
+        if self._lib is None:
+            return
+        self._lib.IBSU_EnableTraceLog(1 if enable else 0)
+
+    # ------------------------------------------------------------------
     # SDK version
     # ------------------------------------------------------------------
 
@@ -896,37 +1252,79 @@ class IBScanSensorDriver(SensorDriver):
         return self._driver.is_open
 
     def capture_image(self) -> CaptureResult:
-        """Blocking single-finger capture using callback-driven flow."""
+        """Blocking single-finger capture — returns as soon as result ready.
+
+        Used for verify/identify where speed matters.
+        """
+        return self._do_capture(timeout=15.0)
+
+    def capture_image_for_enroll(
+        self,
+        capture_duration: float = 4.0,
+        image_type: int = IBSU_ImageType.FLAT_SINGLE_FINGER,
+        resolution: int = IBSU_ImageResolution.RESOLUTION_500,
+    ) -> IBScanCaptureResult:
+        """Blocking capture optimised for enrollment.
+
+        Waits *capture_duration* seconds (3-5s recommended) to allow the
+        sensor to collect the best possible image with full finger area
+        coverage.  Auto-capture is disabled so the SDK keeps refining
+        until we manually take the result.
+
+        Returns:
+            IBScanCaptureResult with segments and quality info.
+        """
         if not self._driver.is_open:
-            return CaptureResult(success=False, error="Device not open")
+            return IBScanCaptureResult(success=False, error="Device not open")
         try:
             self._capture_event.clear()
             self._capture_result_data = None
-            self._driver.begin_capture(
-                IBSU_ImageType.FLAT_SINGLE_FINGER,
-                IBSU_ImageResolution.RESOLUTION_500,
-                IBSU_OPTION_AUTO_CONTRAST | IBSU_OPTION_AUTO_CAPTURE,
-            )
-            if not self._capture_event.wait(timeout=15.0):
+
+            # Disable auto-capture so sensor keeps scanning for *duration*
+            options = IBSU_OPTION_AUTO_CONTRAST  # no AUTO_CAPTURE
+            self._driver.begin_capture(image_type, resolution, options)
+
+            # Let sensor collect for the full duration
+            import time
+            time.sleep(capture_duration)
+
+            # Now manually trigger result capture
+            try:
+                self._driver.take_result_manually()
+            except IBScanError:
+                pass  # May already have result if finger was lifted
+
+            # Wait for the result callback
+            if not self._capture_event.wait(timeout=5.0):
                 self._driver.cancel_capture()
-                return CaptureResult(success=False, error="Capture timeout")
+                return IBScanCaptureResult(success=False, error="Capture timeout after enrollment wait")
 
             data = self._capture_result_data
             if data is None:
-                return CaptureResult(success=False, error="No capture data")
+                return IBScanCaptureResult(success=False, error="No capture data")
 
             status, img_bytes, width, height, segments, finger_count = data
             quality = _calculate_quality_fast(img_bytes)
-            return CaptureResult(
+
+            seg_qualities = []
+            for seg_img in segments:
+                seg_qualities.append(
+                    int(_calculate_quality_fast(seg_img))
+                )
+
+            return IBScanCaptureResult(
                 success=True,
                 image_data=img_bytes,
                 width=width,
                 height=height,
+                resolution=float(resolution),
                 quality_score=quality,
-                has_finger=finger_count > 0,
+                finger_count=finger_count,
+                segment_images=segments,
+                segment_qualities=tuple(seg_qualities),
             )
         except IBScanError as exc:
-            return CaptureResult(success=False, error=str(exc))
+            return IBScanCaptureResult(success=False, error=str(exc))
 
     def check_finger(self) -> bool:
         return self._driver.is_open
@@ -981,6 +1379,47 @@ class IBScanSensorDriver(SensorDriver):
             return True
         except IBScanError:
             return False
+
+    # --- Duplicate detection for enrollment ---
+
+    def check_duplicate_finger(
+        self, image_bytes: bytes, width: int, height: int,
+        finger_position: int,
+    ) -> Tuple[bool, int]:
+        """Check if this finger was already enrolled (anti-duplicate).
+
+        Args:
+            image_bytes: Raw grayscale image.
+            width, height: Image dimensions.
+            finger_position: Finger position bitmask.
+
+        Returns:
+            (is_duplicate, matched_position): True if finger matches
+            a previously added image.
+        """
+        return self._driver.is_finger_duplicated_from_bytes(
+            image_bytes, width, height, finger_position,
+        )
+
+    def register_enrolled_finger(
+        self, image_bytes: bytes, width: int, height: int,
+        finger_position: int,
+    ) -> None:
+        """Add finger to the SDK's internal duplicate-check gallery.
+
+        Call this after successful enrollment so future enrollments
+        can detect duplicates.
+        """
+        self._driver.add_finger_image_from_bytes(
+            image_bytes, width, height, finger_position,
+        )
+
+    def clear_enrolled_finger(self, finger_position: int) -> None:
+        """Remove finger from duplicate-check gallery."""
+        try:
+            self._driver.remove_finger_image(finger_position)
+        except IBScanError:
+            pass
 
     # --- Extended IBScanUltimate features ---
 
@@ -1058,7 +1497,77 @@ class IBScanSensorDriver(SensorDriver):
             self._driver.save_png(path, image_data, width, height)
         return path
 
+    def wsq_encode_mem(
+        self, image_bytes: bytes, width: int, height: int,
+    ) -> bytes:
+        """Encode image to WSQ in memory (no temp file)."""
+        return self._driver.wsq_encode_mem(image_bytes, width, height)
+
+    def wsq_decode_mem(self, wsq_data: bytes) -> Tuple[bytes, int, int]:
+        """Decode WSQ data from memory. Returns (image_bytes, width, height)."""
+        return self._driver.wsq_decode_mem(wsq_data)
+
+    def convert_to_iso_template(
+        self, image_bytes: bytes, width: int, height: int,
+        finger_position: int = 0,
+        standard_format: int = 0,
+    ) -> bytes:
+        """Convert captured image to ISO/ANSI template bytes."""
+        buf = (ctypes.c_ubyte * len(image_bytes)).from_buffer_copy(image_bytes)
+        img = IBSU_ImageData()
+        img.Buffer = ctypes.cast(buf, ctypes.c_void_p)
+        img.Width = width
+        img.Height = height
+        img.BitsPerPixel = 8
+        img.Format = 0
+        img.Pitch = width
+        img.IsFinal = 1
+        return self._driver.convert_image_to_iso(
+            img, finger_position, standard_format,
+        )
+
+    def is_capture_active(self) -> bool:
+        """Check if a capture is currently running."""
+        return self._driver.is_capture_active()
+
+    def get_rolling_info(self) -> Tuple[int, int]:
+        """Get rolling capture state and line position."""
+        return self._driver.get_rolling_info()
+
     # --- Internal ---
+
+    def _do_capture(self, timeout: float = 15.0) -> CaptureResult:
+        """Core capture logic — immediate result (for verify/identify)."""
+        if not self._driver.is_open:
+            return CaptureResult(success=False, error="Device not open")
+        try:
+            self._capture_event.clear()
+            self._capture_result_data = None
+            self._driver.begin_capture(
+                IBSU_ImageType.FLAT_SINGLE_FINGER,
+                IBSU_ImageResolution.RESOLUTION_500,
+                IBSU_OPTION_AUTO_CONTRAST | IBSU_OPTION_AUTO_CAPTURE,
+            )
+            if not self._capture_event.wait(timeout=timeout):
+                self._driver.cancel_capture()
+                return CaptureResult(success=False, error="Capture timeout")
+
+            data = self._capture_result_data
+            if data is None:
+                return CaptureResult(success=False, error="No capture data")
+
+            status, img_bytes, width, height, segments, finger_count = data
+            quality = _calculate_quality_fast(img_bytes)
+            return CaptureResult(
+                success=True,
+                image_data=img_bytes,
+                width=width,
+                height=height,
+                quality_score=quality,
+                has_finger=finger_count > 0,
+            )
+        except IBScanError as exc:
+            return CaptureResult(success=False, error=str(exc))
 
     def _on_capture_result(
         self, status: int, img_bytes: bytes,
